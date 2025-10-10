@@ -1,6 +1,6 @@
 ﻿using EShop.entities;
 
-namespace EShop.Dto
+namespace EShop.Dto.ProductModel
 {
     public class ProductDto
     {

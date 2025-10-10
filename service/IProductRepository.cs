@@ -9,5 +9,7 @@ namespace EShop.service
         Task<bool> CreateAsyncProduct(Product product, CancellationToken cancellationToken);
         Task<bool> UpdateAsyncProduct(Product product, CancellationToken cancellationToken);  
         Task<bool> DeleteAsyncProduct(Product product, CancellationToken cancellationToken);
+        Task CreateAsync(Product product, CancellationToken none);
+        Task CreateAsync(IProductRepository productRepository, CancellationToken none);
     }
 }

@@ -1,4 +1,5 @@
-﻿using EShop.service.Interface;
+﻿using EShop.Dto.CategoryModel;
+using EShop.service.Interface;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -34,7 +35,10 @@ namespace EShop.Controllers
         }
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById[FromRoute] Guid id)
-        
+            {
+            }
+
+
 
     }
 }

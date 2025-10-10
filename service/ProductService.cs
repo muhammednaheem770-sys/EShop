@@ -24,7 +24,7 @@ namespace EShop.service
                     Description = request.Description
                 };
 
-                var result = await _productRepository.CreateAsync(product, CancellationToken.None);
+                var result = await _productRepository.GetProductAsync(product, CancellationToken.None);
 
                 if (result)
                 {

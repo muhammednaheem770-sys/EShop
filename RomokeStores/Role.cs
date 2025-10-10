@@ -1,6 +1,8 @@
-﻿namespace EShop.RomokeStores
+﻿using EShop.entities;
+
+namespace EShop.RomokeStores
 {
-    public class Role
+    public class Role : BaseEntity
     {
         public Guid Id { get; set; }
         public string Name { get; set; }
