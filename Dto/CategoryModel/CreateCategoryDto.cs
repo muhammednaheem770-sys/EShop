@@ -2,7 +2,7 @@
 {
     public class CreateCategoryDto
     {
-        public string name { get; set; }
-        public string description { get; set; } = string.Empty; 
+        public string Name { get; set; }
+        public string Description { get; set; } = string.Empty; 
     }
 }

@@ -2,7 +2,7 @@
 
 namespace EShop.RomokeStores
 {
-    public class User :BaseEntity
+    public class User : BaseEntity
     {
         public Guid UserId { get; set; }
         public string Name { get; set; }
@@ -13,6 +13,4 @@ namespace EShop.RomokeStores
         public string Address { get; set; }
         public Gender Gender { get; set; }
     }
-
-   
 }

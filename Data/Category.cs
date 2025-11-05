@@ -1,4 +1,7 @@
-﻿namespace EShop.entities
+﻿
+
+
+namespace EShop.entities
 {
     public class Category : BaseEntity
     {

@@ -7,12 +7,11 @@ namespace EShop.Repositories
 {
     public class ProductRepository(ApplicationDbContext dbContext) : IProductRepository
     {
-        public async Task<bool> AddASync(Product product, CancellationToken cancellationToken)
+        public async Task<bool> AddAsync(Product product, CancellationToken cancellationToken)
         {
             await dbContext.AddAsync(product, cancellationToken);
             return await dbContext.SaveChangesAsync() > 0 ? true : false;
         }
-
         public async Task<bool> DeleteAsync(Product product, CancellationToken cancellationToken)
         {
             dbContext.Remove(product);
@@ -22,16 +21,10 @@ namespace EShop.Repositories
         public async Task<IEnumerable<Product>> GetProductsAsync(CancellationToken cancellationToken)
         {
             return await dbContext.Products
-                .Include(p => p.category)
+                .Include(p => p.CategoryId)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
         }
-
-        public async Task<Product> GetProductsAsync(Guid id,  CancellationToken cancellationToken)
-        {
-            return await dbContext.Products.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
-        }
-
         public async Task<bool> UpdateAsync(Product product, CancellationToken cancellationToken)
         {
             dbContext.Products.Update(product);
@@ -41,15 +34,15 @@ namespace EShop.Repositories
         public async Task<IEnumerable<Product>> GetAllProductsAsync(Guid CategoryId, CancellationToken cancellationToken)
         {
             return await dbContext.Products
-                .Include(p => p.Category)
+                .Include(p => p.CategoryId)
                 .Where (p => p.CategoryId == CategoryId)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
         }
 
-        public Task<Product> GetProductAsync(Guid id, CancellationToken cancellationToken)
+        public async Task<Product> GetProductByIdAsync(Guid id, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return await dbContext.Products.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
         }
-    }
+    };
 }

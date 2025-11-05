@@ -2,10 +2,8 @@
 {
     public class CreateProductDto
     {
-        public string name { get; set; }
-        public object Name { get; internal set; }
-        public string description { get; set; }
-        public object Description { get; internal set; }
+        public string Name { get; internal set; }
+        public string Description { get; internal set; }
         public DateTime? ExpiryDate { get; set; }
         public decimal SellingPrice { get; set; }
         public decimal CostPrice { get; set; }

@@ -9,7 +9,7 @@ namespace EShop.service
 {
     public class CategoryService(ICategoryRepository categoryRepository, ILogger<ICategoryService> logger) : ICategoryService
     {
-        public object categories { get; private set; }
+        public object Categories { get; private set; }
 
         public async Task<BaseResponse<bool>> CreateAsync(CreateCategoryDto request)
         {
@@ -18,8 +18,8 @@ namespace EShop.service
                 var category = new Category
                 {
                     Id = Guid.NewGuid(),
-                    Name = request.name,
-                    Description = request.description
+                    Name = request.Name,
+                    Description = request.Description
                 };
 
                 var result = await categoryRepository.CreateAsync(category, CancellationToken.None);
@@ -62,7 +62,7 @@ namespace EShop.service
                 return BaseResponse<bool>.FailResponse($"Error; {ex.Message}");
             }
         }
-        public async Task<BaseResponse<IEnumerable<CategoryDto>>> GetAllAsync(bool c)
+        public async Task<BaseResponse<IEnumerable<CategoryDto>>> GetAllAsync()
         {
             try
             {
@@ -78,7 +78,7 @@ namespace EShop.service
                     Description = c.Description
                 });
 
-                return BaseResponse<IEnumerable<CategoryDto>>.SuccessResponse(categoryDtos, "categories retrieved succesfully.")
+                return BaseResponse<IEnumerable<CategoryDto>>.SuccessResponse(categoryDtos, "categories retrieved succesfully.");
             }
             catch (Exception ex)
             {
@@ -87,11 +87,7 @@ namespace EShop.service
             }
         }
 
-        public Task<BaseResponse<IEnumerable<CategoryDto>>> GetAllAsync()
-        {
-            throw new NotImplementedException();
-        }
-
+     
         public async Task<BaseResponse<CategoryDto>> GetByIdAsync(Guid id)
         {
             try

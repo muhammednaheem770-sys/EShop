@@ -7,7 +7,7 @@ namespace EShop.service.Interface
     {
         Task<BaseResponse<bool>> CreateAsync(CreateProductDto request);
         Task<BaseResponse<bool>> UpdateAsync(Guid id, CreateProductDto request);
-        Task<BaseResponse<bool>> DeleteAsync(Guid id);
+        Task<BaseResponse<bool>> DeleteAsync(Guid id, CancellationToken cancellationToken);
         Task<BaseResponse<ProductDto>> GetByIdAsync(Guid id);
         Task<BaseResponse<IEnumerable<ProductDto>>> GetProductsByCategoryIdAsync(Guid categoryId);
         Task<BaseResponse<IEnumerable<ProductDto>>> GetAllAsync();

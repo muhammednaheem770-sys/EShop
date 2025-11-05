@@ -1,4 +1,5 @@
-﻿namespace EShop.Dto
+﻿
+namespace EShop.Dto
 {
     public class BaseResponse<T>
     {

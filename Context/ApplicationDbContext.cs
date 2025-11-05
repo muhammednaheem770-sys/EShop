@@ -1,16 +1,11 @@
 ﻿using EShop.entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace EShop.Context
+namespace EShop.Context;
+
+public class ApplicationDbContext(DbContextOptions options) : DbContext(options)
 {
-    public class ApplicationDbContext : DbContext
-    {
-        public ApplicationDbContext(DbContextOptions options) : base(options)
-        {
-        }
 
-
-        public DbSet<Product> Products { get; set; }
-        public DbSet<Category> Categories { get; set; }
-    }
+    public DbSet<Product> Products { get; set; }
+    public DbSet<Category> Categories { get; set; } 
 }
