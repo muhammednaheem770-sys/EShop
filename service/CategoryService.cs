@@ -2,19 +2,25 @@
 using EShop.Dto.CategoryModel;
 using EShop.entities;
 using EShop.Repositories.Interface;
-using EShop.service.Interface;
-using System.Linq.Expressions;
+using EShop.Service.Interface;
+using Serilog;
 
-namespace EShop.service
+namespace EShop.Service
 {
-    public class CategoryService(ICategoryRepository categoryRepository, ILogger<ICategoryService> logger) : ICategoryService
+    public class CategoryService(ICategoryRepository categoryRepository) : ICategoryService
     {
-        public object Categories { get; private set; }
-
         public async Task<BaseResponse<bool>> CreateAsync(CreateCategoryDto request)
         {
             try
             {
+                if (string.IsNullOrEmpty(request.Name))
+                {
+                    Log.Warning("Category creation failed: Name is missing.");
+                    return new BaseResponse<bool>(false, "Invalid data! Category name is required.");
+                }
+
+                Log.Information("Creating new category: {CategoryName}", request.Name);
+
                 var category = new Category
                 {
                     Id = Guid.NewGuid(),
@@ -26,14 +32,17 @@ namespace EShop.service
 
                 if ((!result))
                 {
-                    return BaseResponse<bool>.FailResponse("Failed to create category. ");
+                    Log.Error("Failed to create category {CategoryName}", request.Name);
+                    return new BaseResponse<bool>(false, "Failed to create category. ");
                 }
-                return BaseResponse<bool>.SuccessResponse(true, "Category created succesfully. ");
+
+                Log.Information("Category {CategoryName} created successfully", request.Name);
+                return BaseResponse<bool>.SuccessResponse(true, "Category created successfully. ");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error occured while deleting category.");
-                return BaseResponse<bool>.FailResponse($"Error: {ex.Message}");
+                Log.Error(ex, "Error occurred while deleting category.");
+                return new BaseResponse<bool>(false, $"Error: {ex.Message}");
             }
         }
 
@@ -42,60 +51,76 @@ namespace EShop.service
         {
             try
             {
+                Log.Information("Attempting to delete category with ID {CategoryId}", id);
+
                 var category = await categoryRepository.GetByIdAsync(id, CancellationToken.None);
 
                 if ((category == null))
                 {
-                    return BaseResponse<bool>.FailResponse("Category not found.");
+                    Log.Warning("Category with ID {CategoryId} not found for deletion", id);
+                    return new BaseResponse<bool>(false, "Category not found.");
                 }
-                    var result = await categoryRepository.DeleteAsync(category, CancellationToken.None);
+                var deleted = await categoryRepository.DeleteAsync(category, CancellationToken.None);
 
-                if ((!result))
-                    {
-                        return BaseResponse<bool>.FailResponse("Failed to delete category.");
-                    }
-                    return BaseResponse<bool>.SuccessResponse(true, "Category deleted succesfully.");
+                if ((!deleted))
+                {
+                    Log.Error("Failed to delete category with ID {CategoryId}", id);
+                    return new BaseResponse<bool>(false, "Failed to delete category.");
+                }
+
+                Log.Information("Category with ID {CategoryId} deleted successfully", id);
+                return BaseResponse<bool>.SuccessResponse(true, "Category deleted successfully.");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error occured while deleting category.");
-                return BaseResponse<bool>.FailResponse($"Error; {ex.Message}");
+                Log.Error(ex, "Error occurred while deleting category.");
+                return new BaseResponse<bool>(false, $"Error; {ex.Message}");
             }
         }
         public async Task<BaseResponse<IEnumerable<CategoryDto>>> GetAllAsync()
         {
             try
             {
-                var categories = await categoryRepository.GetAllAsync(CancellationToken.None);
+                Log.Information("Retrieving all categories");
 
+                var categories = await categoryRepository.GetAllAsync();
                 if (categories == null || !categories.Any())
-                    return BaseResponse<IEnumerable<CategoryDto>>.FailResponse("No categories found.");
+                {
+                    Log.Warning("No categories found in the database");
+                    return new BaseResponse<IEnumerable<CategoryDto>>(false, "No categories found.");
+                }
 
-                var categoryDtos = categories.Select(c => new CategoryDto
+                var categoryDto = categories.Select(c => new CategoryDto
                 {
                     Id = c.Id,
                     Name = c.Name,
                     Description = c.Description
                 });
 
-                return BaseResponse<IEnumerable<CategoryDto>>.SuccessResponse(categoryDtos, "categories retrieved succesfully.");
+                Log.Information("Retrieved {Count} categories successfully", categoryDto.Count());
+                return BaseResponse<IEnumerable<CategoryDto>>.SuccessResponse(categoryDto, "categories retrieved succesfully.");
             }
             catch (Exception ex)
             {
-                logger.LogError($"Error retrieving categories: {ex.Message}");
-                return BaseResponse<IEnumerable<CategoryDto>>.FailResponse("An error occured while retrieving categories.");
+                Log.Error($"Error retrieving categories: {ex.Message}");
+                return new BaseResponse<IEnumerable<CategoryDto>>(false, "An error occurred while retrieving categories.");
             }
         }
 
-     
-        public async Task<BaseResponse<CategoryDto>> GetByIdAsync(Guid id)
+
+        public async Task<BaseResponse<CategoryDto>> GetByIdAsync(Guid id, CancellationToken cancellationToken)
         {
             try
             {
+                Log.Information("Retrieving category with ID {CategoryId}", id);
+
                 var category = await categoryRepository.GetByIdAsync(id, CancellationToken.None);
 
                 if (category == null)
-                    return BaseResponse<CategoryDto>.FailResponse("Categor not found.");
+                {
+                    Log.Warning("Category with ID {CategoryId} not found", id);
+                    return new BaseResponse<CategoryDto>(false, "Category not found.");
+                }
 
                 var categoryDto = new CategoryDto
                 {
@@ -103,12 +128,37 @@ namespace EShop.service
                     Name = category.Name,
                     Description = category.Description
                 };
-                return BaseResponse<CategoryDto>.SuccessResponse(categoryDto, "Category retrieved succesfully.");
+                Log.Information("Category with ID {CategoryId} retrieved successfully", id);
+                return BaseResponse<CategoryDto>.SuccessResponse(categoryDto, "Category retrieved successfully.");
             }
             catch (Exception ex)
             {
-                logger.LogError($"Error retrieving category by ID: {ex.Message}");
-                return BaseResponse<CategoryDto>.FailResponse("An error occured while retrieving the category.");
+                Log.Error($"Error retrieving category by ID: {ex.Message}");
+                return new BaseResponse<CategoryDto>(false, "An error occurred while retrieving the category.");
+            }
+        }
+
+        public async Task<List<CategoryDto>> GetCategoriesAsync()
+        {
+            try
+            {
+                Log.Information("Retrieving all categories (lightweight DTO list)");
+
+                var categories = await categoryRepository.GetAllAsync();
+                var categoryDto = categories.Select(c => new CategoryDto
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Description = c.Description
+                }).ToList();
+
+                Log.Information("Retrieved {Count} categories successfully", categoryDto.Count);
+                return categoryDto;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error retrieving category list");
+                return new List<CategoryDto>();
             }
         }
 
@@ -116,18 +166,32 @@ namespace EShop.service
         {
             try
             {
+                Log.Information("Updating category with ID {CategoryId}", id);
+
                 var category = await categoryRepository.GetByIdAsync(id, CancellationToken.None);
 
-                if ((category == null))
+                if (category == null)
                 {
-                    return BaseResponse<bool>.FailResponse("Failed to update category.");
+                    Log.Warning("Category with ID {CategoryId} not found for update", id);
+                    return new BaseResponse<bool>(false, "Failed to update category.");
                 }
-                return BaseResponse<bool>.SuccessResponse(true, "Category updates successfully.");
+                category.Name = request.Name;
+                category.Description = request.Description;
+
+                var updated = await categoryRepository.UpdateAsync(category, CancellationToken.None);
+                if (!updated)
+                {
+                    Log.Error("Failed to update category with ID {CategoryId}", id);
+                    return new BaseResponse<bool>(false, "Failed to update category.");
+                }
+
+                Log.Information("Category with ID {CategoryId} updated successfully", id);
+                return BaseResponse<bool>.SuccessResponse(true, "Category updated successfully.");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error occured while uodating category.");
-                return BaseResponse<bool>.FailResponse($"Error: {ex:message}");
+                Log.Error(ex, "Error occurred while updating category with ID {CategoryId}", id);
+                return new BaseResponse<bool>(false, $"Error: {ex.Message}");
             }
         }
     }

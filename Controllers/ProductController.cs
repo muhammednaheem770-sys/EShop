@@ -1,21 +1,24 @@
 ﻿using EShop.Dto.ProductModel;
 using EShop.service.Interface;
+using EShop.Service.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EShop.Controllers
 {
-    [ApiController]
+
     [Route("api/[controller]")]
+    [ApiController]
     public class ProductController(IProductService productService) : ControllerBase
+
     {
         [HttpPost("create-product")]
-        public async Task<IActionResult> Create([FromBody] CreateProductDto request)
+        public async Task<IActionResult> Create([FromBody] CreateProductDto request, CancellationToken cancellationToken)
         {
             if (request == null)
                 return BadRequest("Product data cannot be null.");
-            var response = await productService.CreateAsync(request);
+            var response = await productService.CreateAsync(request,cancellationToken);
             if (!response.Success)
-                return BadRequest(response.Message);
+                return BadRequest(new { messsage = response.Message });
 
             return Ok(response);
         }
@@ -33,31 +36,31 @@ namespace EShop.Controllers
         public async Task<IActionResult> GetProductsByCategoryIdAsync(Guid categoryId)
         {
             if (categoryId == Guid.Empty)
-                 return BadRequest("Invalid category ID.");
+                return BadRequest("Invalid category ID.");
 
             var response = await productService.GetProductsByCategoryIdAsync(categoryId);
-            
+
             if (!response.Success)
-                return NotFound(new {message = response.Message });
+                return NotFound(new { message = response.Message });
             return Ok(response);
         }
 
-    [HttpPut("update-product/{product-id}")]
-    public async Task<IActionResult> update([FromRoute(Name = "product id")] Guid id, [FromBody] CreateProductDto request)
-    {
-        if (request == null)
-            return BadRequest("Invalid categoryID.");
+        [HttpPut("update-product/{product-id}")]
+        public async Task<IActionResult> update([FromRoute(Name = "product id")] Guid id, [FromBody] CreateProductDto request)
+        {
+            if (request == null)
+                return BadRequest("Invalid categoryID.");
 
-        var response = await productService.UpdateAsync(id, request);
+            var response = await productService.UpdateAsync(id, request);
 
-        if (!response.Success)
-            return BadRequest(response.Message);
+            if (!response.Success)
+                return BadRequest(response.Message);
 
-        return Ok(response);
-    }
+            return Ok(response);
+        }
 
-        [HttpDelete("delete/{product-id}")]
-        public async Task<IActionResult> DeleteAsync([FromRoute] Guid id, CancellationToken cancellationToken)
+        [HttpDelete("delete")]
+        public async Task<IActionResult> DeleteAsync([FromQuery] Guid id, CancellationToken cancellationToken)
         {
             var response = await productService.DeleteAsync(id, cancellationToken);
 

@@ -1,39 +1,51 @@
-﻿using EShop.Dto;
+﻿using Azure.Core;
+using EShop.Context;
+using EShop.Dto;
 using EShop.Dto.ProductModel;
 using EShop.entities;
 using EShop.Repositories;
 using EShop.Repositories.Interface;
 using EShop.service.Interface;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Serilog;
+using System;
 using System.Linq.Expressions;
 using System.Threading;
 
 namespace EShop.service
 {
-    public class ProductService(IProductRepository productRepository, ILogger<ProductService> logger) : IProductService
+    public class ProductService(IProductRepository productRepository) : IProductService
     {
+        private readonly ApplicationDbContext _dbContext;
         public async Task<BaseResponse<bool>> DeleteAsync(Guid id, CancellationToken cancellationToken)
         {
             try
             {
+                Log.Information("Attempting to delete product with ID {ProductId}", id);
+
                 var product = await productRepository.GetProductByIdAsync(id, CancellationToken.None);
 
                 if ((product == null))
                 {
-                    return BaseResponse<bool>.FailResponse("Product not found.");
+                    Log.Warning("Product with ID {ProductId} not found.", id);
+                    return new BaseResponse<bool> (false, "Product not found.");
                 }
                 var result = await productRepository.DeleteAsync(product, CancellationToken.None);
 
                 if ((!result))
                 {
-                    return BaseResponse<bool>.FailResponse("Failes to delete product.");
+                    Log.Error("Failed to delete product with ID {ProductId}", id);
+                    return new BaseResponse<bool>(false, "Failed to delete product.");
                 }
-                return BaseResponse<bool>.SuccessResponse(true, "Product deleted succesfully.");
+
+                Log.Information("Product with ID {ProductId} deleted successfully.", id);
+                return BaseResponse<bool>.SuccessResponse(true, "Product deleted successfully.");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error occured while deleting product.");
-                return BaseResponse<bool>.FailResponse($"Error: (ex.Message)");
+                Log.Error(ex, "Error occurred while deleting product.");
+                return new BaseResponse<bool>(false, $"Error: (ex.Message)");
             }
         }
 
@@ -41,13 +53,17 @@ namespace EShop.service
         {
             try
             {
+                Log.Information("Retrieving all products.");
+
                 var products = await productRepository.GetProductsAsync(CancellationToken.None);
 
                 if (products == null || !products.Any())
-                    return BaseResponse<IEnumerable<ProductDto>>.FailResponse("No product found.");
-
-                var _context = new List<ProductDto>();
-                var productDtos = _context.Select(p => new ProductDto
+                {
+                    Log.Warning("No products found in the database.");
+                    return new BaseResponse<IEnumerable<ProductDto>>(false, "No product found.");
+                }
+              
+                var productDto = products.Select(p => new ProductDto
                 {
                     Id = p.Id,
                     Description = p.Description,
@@ -56,14 +72,19 @@ namespace EShop.service
                     StockQuantity = p.StockQuantity,
                     ExpiryDate = p.ExpiryDate,
                     CreatedAt = p.CreatedAt,
-                    //Category = p.Category != null ? p.Category.Name : "Uncategorized"
+                    CategoryName = p.Category != null ? p.Category.Name : "Uncategorized",
+                    ProductName = p.Name,
+                    CategoryId = p.CategoryId,
+                    SellingPrice = p.SellingPrice,
                 });
-                return BaseResponse<IEnumerable<ProductDto>>.SuccessResponse(productDtos, "Products retrieved succesfully.");
+
+                Log.Information("Retrieved {Count} products successfully.", productDto.Count());
+                return BaseResponse<IEnumerable<ProductDto>>.SuccessResponse(productDto, "Products retrieved succesfully.");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error retriwving all products.");
-                return BaseResponse<IEnumerable<ProductDto>>.FailResponse("An error occured while retrieving products.");
+                Log.Error(ex, "Error retrieving all products.");
+                return new BaseResponse<IEnumerable<ProductDto>> (false, "An error occurred while retrieving products.");
             }
         }
 
@@ -71,109 +92,89 @@ namespace EShop.service
         {
             try
             {
-                var product = await productRepository.GetProductByIdAsync(id, CancellationToken.None);
+                Log.Information("Retrieving product with ID {ProductId}", id);
 
-                if ((product == null))
+                var product = await productRepository.GetProductByIdAsync(id, CancellationToken.None);
+                if (product == null)
                 {
-                    return BaseResponse<ProductDto>.FailResponse("Product not found");
+                    Log.Warning("Product with ID {ProductId} not found.", id);
+                    return new BaseResponse<ProductDto>(false, "Product not found.");
                 }
+
                 var productDto = new ProductDto
                 {
                     Id = product.Id,
                     ProductName = product.Name,
-                    Price = product.SellingPrice,
-                    CostPrice = product.CostPrice,
                     Description = product.Description,
+                    SellingPrice = product.SellingPrice,
+                    CostPrice = product.CostPrice,
+                    StockQuantity = product.StockQuantity,
                     CategoryId = product.CategoryId,
                     ExpiryDate = product.ExpiryDate,
-                    CreatedAt = product.CreatedAt,
-                    StockQuantity = product.StockQuantity,
+                    CreatedAt = product.CreatedAt
                 };
-                return BaseResponse<ProductDto>.SuccessResponse(productDto, "Product retrieved succesfully");
+
+                Log.Information("Product {ProductName} retrieved successfully.", product.Name);
+                return BaseResponse<ProductDto>.SuccessResponse(productDto, "Product retrieved successfully.");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error occured while fetching product by 10");
-                return BaseResponse<ProductDto>.FailResponse($"Error: {ex.Message}");
+                Log.Error(ex, "Error occurred while retrieving product with ID {ProductId}", id);
+                return new BaseResponse<ProductDto>(false, $"Error: {ex.Message}");
             }
         }
-
-
 
         public async Task<BaseResponse<IEnumerable<ProductDto>>> GetProductsByCategoryIdAsync(Guid categoryId)
         {
             try
             {
+                Log.Information("Retrieving products for category ID {CategoryId}", categoryId);
+
                 var products = await productRepository.GetProductsAsync(CancellationToken.None);
                 if (products == null || !products.Any())
-                    return BaseResponse<IEnumerable<ProductDto>>.FailResponse("No products found.");
+                {
+                    Log.Warning("No products found for category ID {CategoryId}", categoryId);
+                    return new BaseResponse<IEnumerable<ProductDto>>(false, "No products found.");
+                }
 
-                var filteredProducts = products
-                    .Where(p => p.Id == categoryId)
-                    .ToList();
-                if (!filteredProducts.Any())
-                    return BaseResponse<IEnumerable<ProductDto>>.FailResponse("No product found for the specified category.");
+                var filtered = products.Where(p => p.CategoryId == categoryId).ToList();
+                if (!filtered.Any())
+                {
+                    Log.Warning("No products found for category ID {CategoryId}", categoryId);
+                    return new BaseResponse<IEnumerable<ProductDto>>(false, "No products found for the specified category.");
+                }
 
-                var productDtos = filteredProducts.Select(p => new ProductDto
+                var productDto = filtered.Select(p => new ProductDto
                 {
                     Id = p.Id,
                     ProductName = p.Name,
                     Description = p.Description,
-                }).ToList();
+                    SellingPrice = p.SellingPrice,
+                    CategoryId = p.CategoryId
+                });
 
-                return BaseResponse<IEnumerable<ProductDto>>.SuccessResponse(productDtos, "Product retrieved succesfully.");
-
+                Log.Information("Retrieved {Count} products for category ID {CategoryId}", productDto.Count(), categoryId);
+                return BaseResponse<IEnumerable<ProductDto>>.SuccessResponse(productDto, "Products retrieved successfully.");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error occured while fetching products.");
-                return BaseResponse<IEnumerable<ProductDto>>.FailResponse($"Error: {ex.Message}");
+                Log.Error(ex, "Error occurred while retrieving products by category ID {CategoryId}", categoryId);
+                return new BaseResponse<IEnumerable<ProductDto>>(false, $"Error: {ex.Message}");
             }
         }
 
-        public async Task<BaseResponse<bool>> UpdateAsyncProduct(Guid id, CreateProductDto request)
+        public async Task<BaseResponse<bool>> CreateAsync(CreateProductDto request, CancellationToken cancellationToken)
         {
-            try
-            {
-                var product = await productRepository.GetProductByIdAsync(id, CancellationToken.None);
-
-                if (product == null)
-                    return BaseResponse<bool>.FailResponse("Product not found.");
-
-                product.Name = request.Name;
-                product.Description = request.Description;
-                product.SellingPrice = request.SellingPrice;
-                product.CostPrice = request.CostPrice;
-                product.StockQuantity = request.StockQuantity;
-                product.CategoryId = request.CategoryId;
-                if (request.ExpiryDate.HasValue)
-                    product.ExpiryDate = request.ExpiryDate.Value;
-                product.UpdatedAt = DateTime.UtcNow;
-
-                var result = await productRepository.UpdateAsync(product, CancellationToken.None);
-
-                if (!result)
-                    return BaseResponse<bool>.FailResponse("Failed to update product.");
-                return BaseResponse<bool>.SuccessResponse(true, "Product updated succesfully");
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error occured while updating product.");
-                return BaseResponse<bool>.FailResponse($"Error: {ex.Message}"); ;
-            }
-        }
-
-
-        public async Task<BaseResponse<bool>> CreateAsync(CreateProductDto request)
-        {
-            var cancellationToken = CancellationToken.None;
+           
             try
             {
                 if ((request == null))
                 {
-                    return BaseResponse<bool>.FailResponse("Invalid product data.");
-
+                    Log.Warning("Attempted to create product with null request data.");
+                    return new BaseResponse<bool> (false, "Invalid product data.");
                 }
+                Log.Information("Creating new product: {ProductName}", request.Name);
+
                 var product = new Product
                 {
                     Id = Guid.NewGuid(),
@@ -183,29 +184,36 @@ namespace EShop.service
                     CostPrice = request.CostPrice,
                     StockQuantity = request.StockQuantity,
                     CategoryId = request.CategoryId,
+                    ExpiryDate = request.ExpiryDate,
+                    
                     CreatedAt = DateTime.Now,
                 };
 
                 await productRepository.AddAsync(product, cancellationToken);
-                return BaseResponse<bool>.SuccessResponse(true, "Product created succesfully.");
+
+                Log.Information("Product {ProductName} created successfully.", request.Name);
+                return BaseResponse<bool>.SuccessResponse(true, "Product created successfully.");
 
             }
             catch (Exception ex)
             {
-                logger.LogCritical($"Error: {ex.InnerException?.Message ?? ex.Message}");
-                return BaseResponse<bool>.FailResponse("Create your support service.");
+                Log.Error(ex, "Error occurred while creating product {ProductName}", request?.Name);
+                return new BaseResponse<bool> (false, "Create your support service.");
             }
         }
 
         public async Task<BaseResponse<bool>> UpdateAsync(Guid id, CreateProductDto request)
         {
-            var cancellationToken = CancellationToken.None;
             try
             {
-                var product = await productRepository.GetProductByIdAsync(id, CancellationToken.None);
+                Log.Information("Updating product with ID {ProductId}", id);
 
+                var product = await productRepository.GetProductByIdAsync(id, CancellationToken.None);
                 if (product == null)
-                    return BaseResponse<bool>.FailResponse("Product not found.");
+                {
+                    Log.Warning("Product with ID {ProductId} not found for update.", id);
+                    return new BaseResponse<bool>(false, "Product not found.");
+                }
 
                 product.Name = request.Name;
                 product.Description = request.Description;
@@ -218,15 +226,59 @@ namespace EShop.service
                 product.UpdatedAt = DateTime.UtcNow;
 
                 var result = await productRepository.UpdateAsync(product, CancellationToken.None);
-
                 if (!result)
-                    return BaseResponse<bool>.FailResponse("Failed to update product.");
-                return BaseResponse<bool>.SuccessResponse(true, "Product updated succesfully");
+                {
+                    Log.Error("Failed to update product with ID {ProductId}", id);
+                    return new BaseResponse<bool>(false, "Failed to update product.");
+                }
+
+                Log.Information("Product {ProductName} updated successfully.", product.Name);
+                return BaseResponse<bool>.SuccessResponse(true, "Product updated successfully.");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error occured while updating product.");
-                return BaseResponse<bool>.FailResponse($"Error: {ex.Message}"); ;
+                Log.Error(ex, "Error occurred while updating product with ID {ProductId}", id);
+                return new BaseResponse<bool>(false, $"Error: {ex.Message}");
+            }
+
+        }
+
+        public async Task<BaseResponse<Product>> AddProductAsync(AddProductRequest request, CancellationToken cancellationToken)
+        {
+            try
+            {
+                Log.Information("Attempting to add a new product: {ProductName}", request.Name);
+
+                var existingProduct = await _dbContext.Products
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Name == request.Name, cancellationToken);
+
+                if (existingProduct != null)
+                {
+                    Log.Warning("Product with name {ProductName} already exists", request.Name);
+                    return BaseResponse<Product>.FailureResponse("Product already exists.");
+                }
+
+                var product = new Product
+                {
+                    Id = Guid.NewGuid(),
+                    Name = request.Name,
+                    Description = request.Description,
+                    Price = request.Price,
+                    CategoryId = request.CategoryId,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _dbContext.Products.AddAsync(product, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
+                Log.Information("Product {ProductName} added successfully", request.Name);
+                return BaseResponse<Product>.SuccessResponse(product, "Product added successfully.");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error occurred while adding product {ProductName}", request.Name);
+                return BaseResponse<Product>.FailureResponse("An error occurred while adding the product.");
             }
         }
     }

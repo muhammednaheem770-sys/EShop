@@ -1,14 +1,15 @@
 ﻿using EShop.Dto;
 using EShop.Dto.CategoryModel;
+using Microsoft.AspNetCore.Mvc;
 
-namespace EShop.service.Interface
+namespace EShop.Service.Interface
 {
     public interface ICategoryService
     {
         Task<BaseResponse<bool>> CreateAsync(CreateCategoryDto request);
-        Task<BaseResponse<IEnumerable<CategoryDto>>> GetAllAsync();
+        Task<List<CategoryDto>> GetCategoriesAsync();       
+        Task<BaseResponse<CategoryDto>> GetByIdAsync(Guid id, CancellationToken cancellationToken);
         Task<BaseResponse<bool>> DeleteAsync(Guid id);
-        Task<BaseResponse<CategoryDto>> GetByIdAsync(Guid id);
         Task<BaseResponse<bool>> UpdateAsync(Guid id, CreateCategoryDto request);
     }
 }

@@ -1,11 +1,14 @@
 ﻿using EShop.entities;
 
-namespace EShop.RomokeStores
+namespace EShop.Data
 {
     public class Role : BaseEntity
     {
-        public Guid RoleId { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
     }
 }
+
+
+
+

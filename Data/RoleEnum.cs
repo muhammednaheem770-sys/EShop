@@ -1,0 +1,8 @@
+﻿namespace EShop.Data
+{
+    public enum RoleEnum
+    {
+        Admin = 1,
+        User = 2,
+    }
+}

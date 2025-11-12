@@ -1,4 +1,4 @@
-﻿namespace EShop.RomokeStores
+﻿namespace EShop.Data
 {
     public enum Gender
     {

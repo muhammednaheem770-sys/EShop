@@ -21,7 +21,7 @@ namespace EShop.Repositories
         public async Task<IEnumerable<Product>> GetProductsAsync(CancellationToken cancellationToken)
         {
             return await dbContext.Products
-                .Include(p => p.CategoryId)
+                .Include(p => p.Category)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
         }
@@ -34,7 +34,7 @@ namespace EShop.Repositories
         public async Task<IEnumerable<Product>> GetAllProductsAsync(Guid CategoryId, CancellationToken cancellationToken)
         {
             return await dbContext.Products
-                .Include(p => p.CategoryId)
+                .Include(p => p.Category)
                 .Where (p => p.CategoryId == CategoryId)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);

@@ -20,14 +20,15 @@ namespace EShop.Repositories
             return await _context.SaveChangesAsync() > 0 ? true : false;
         }
 
-        public Task<bool> CreateAsync(Category category, CancellationToken cancellationToken)
+        public async Task<bool> CreateAsync(Category category, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            await _context.AddAsync(category, cancellationToken);
+            return await _context.SaveChangesAsync() > 0 ? true : false;
         }
 
         public async Task<bool> DeleteAsync(Category category, CancellationToken cancellationToken)
         {
-            _context.Categories.Remove(category);
+            _context.Remove(category);
             return await _context.SaveChangesAsync() > 0 ? true : false;
         }
 
@@ -38,14 +39,15 @@ namespace EShop.Repositories
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Category>> GetAllCategoryAsync(CancellationToken cancellationToken)
+        public async Task<List<Category>> GetAllAsync()
         {
-            return await Task.FromResult<IEnumerable<Category>>(new List<Category>());
+            return await _context.Categories.ToListAsync();
         }
 
-        public Task<Category> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+        public async Task<Category> GetByIdAsync(Guid id, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return await _context.Categories
+                .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
         }
 
         public async Task<Category?> GetProductByIdAsync(Guid Id, Category category, CancellationToken cancellationToken)

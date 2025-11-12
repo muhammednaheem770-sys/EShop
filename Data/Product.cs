@@ -10,5 +10,8 @@
         public Category Category { get; set; } = new Category();
         public DateTime? ExpiryDate { get; set; }
         public int StockQuantity { get; set; } = 0;
+        public string ProductName { get; set; }
+        public string CategoryName { get; set; }
+        public decimal Price { get; set; }
     }
 }

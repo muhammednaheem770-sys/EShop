@@ -1,4 +1,6 @@
-﻿namespace EShop.Dto.ProductModel
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace EShop.Dto.ProductModel
 {
     public class CreateProductDto
     {
@@ -9,5 +11,6 @@
         public decimal CostPrice { get; set; }
         public int StockQuantity { get; set; }
         public Guid CategoryId { get; set; }
+        public decimal Price { get; set; }
     }
 }

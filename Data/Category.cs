@@ -1,6 +1,4 @@
 ﻿
-
-
 namespace EShop.entities
 {
     public class Category : BaseEntity

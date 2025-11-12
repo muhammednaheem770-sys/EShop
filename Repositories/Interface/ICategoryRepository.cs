@@ -4,7 +4,7 @@ namespace EShop.Repositories.Interface
 {
     public interface ICategoryRepository
     {
-        Task<IEnumerable<Category>> GetAllAsync(CancellationToken cancellationToken);
+        Task<List<Category>> GetAllAsync();
         Task<Category?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
         Task<bool>CreateAsync(Category category, CancellationToken cancellationToken);
         Task<bool>UpdateAsync(Category category, CancellationToken cancellationToken);
