@@ -22,7 +22,7 @@ namespace EShop.service
         private readonly ApplicationDbContext _dbContext = dbContext;
         private readonly ITokenService _tokenService = tokenService;
 
-        public async Task<BaseResponse<TokenResponseDto>> LoginAsync(EShop.Dto.Auth.LoginRequestDto request, CancellationToken cancellationToken)
+        public async Task<BaseResponse<TokenResponseDto>> LoginAsync(Dto.Auth.LoginRequestDto request, CancellationToken cancellationToken)
         {
             Log.Information("Login attempt for {Email}", request.Email);
 
@@ -35,50 +35,37 @@ namespace EShop.service
                 return BaseResponse<TokenResponseDto>.FailureResponse("Invalid email or password");
             }
 
-            bool isPasswordValid = false;
-            try
-            {
-                isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Error verifying password for {Email}", request.Email);
-                return BaseResponse<TokenResponseDto>.FailureResponse("Error verifying password");
-            }
-
-            if (!isPasswordValid)
+            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
                 Log.Warning("Login failed: invalid password for {Email}", request.Email);
                 return BaseResponse<TokenResponseDto>.FailureResponse("Invalid email or password");
             }
 
-            try
+            // ✅ Fetch roles dynamically from UserRoles table
+            var roles = await _dbContext.UserRoles
+                .Where(ur => ur.UserId == user.Id)
+                .Select(ur => ur.Role.Name)
+                .ToListAsync(cancellationToken);
+
+            var jwtToken = _tokenService.GenerateToken(user, roles);
+            var refreshToken = _tokenService.GenerateRefreshToken();
+
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            var tokenResponse = new TokenResponseDto
             {
-                var jwtToken = _tokenService.GenerateToken(user, new List<string>()); // roles if needed
-                var refreshToken = _tokenService.GenerateRefreshToken();
+                Token = jwtToken,
+                RefreshToken = refreshToken,
+                RefreshTokenExpiryTime = user.RefreshTokenExpiryTime
+            };
 
-                user.RefreshToken = refreshToken;
-                user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-
-                await _dbContext.SaveChangesAsync();
-
-                Log.Information("Login successful for {Email}", request.Email);
-
-                var tokenResponse = new TokenResponseDto
-                {
-                    Token = jwtToken,
-                    RefreshToken = refreshToken,
-                    RefreshTokenExpiryTime = user.RefreshTokenExpiryTime
-                };
-
-                return BaseResponse<TokenResponseDto>.SuccessResponse(tokenResponse, "Login successful");
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Error generating token for {Email}", request.Email);
-                return BaseResponse<TokenResponseDto>.FailureResponse("Error generating token");
-            }
+            Log.Information("Login successful for {Email}", request.Email);
+            return BaseResponse<TokenResponseDto>.SuccessResponse(tokenResponse, "Login successful");
         }
+
 
 
 
@@ -160,12 +147,12 @@ namespace EShop.service
                 };
 
                 return BaseResponse<TokenResponseDto>.SuccessResponse(tokenResponse, "Token refreshed successfully");
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "Error occurred while refreshing token {RefreshToken}", request.RefreshToken);
-                    return BaseResponse<TokenResponseDto>.FailureResponse("An error occurred while refreshing token");
-                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error occurred while refreshing token {RefreshToken}", request.RefreshToken);
+                return BaseResponse<TokenResponseDto>.FailureResponse("An error occurred while refreshing token");
+            }
         }
 
 

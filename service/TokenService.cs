@@ -25,22 +25,25 @@ namespace EShop.service
         public string GenerateToken(User user, IEnumerable<string> roles)
         {
             if (string.IsNullOrWhiteSpace(_jwtSettings.Secret))
-            {
                 throw new InvalidDataException("JWT key is not configured");
-            }
+
             var secretKey = Encoding.UTF8.GetBytes(_jwtSettings.Secret);
             var credentials = new SigningCredentials(
                 new SymmetricSecurityKey(secretKey),
                 SecurityAlgorithms.HmacSha256
-                );
+            );
 
             var claims = new List<Claim>
             {
-                new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new(ClaimTypes.Email, user.Email),
-                new(ClaimTypes.Name, user.Name)
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()), // subject
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // unique token ID
+                new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Name, user.Name)
             };
 
+            // Add role claims
             claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
             var expiry = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpireMinutes);
@@ -54,7 +57,7 @@ namespace EShop.service
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
-
         }
+
     }
 }

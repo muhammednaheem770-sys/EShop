@@ -12,5 +12,6 @@ namespace EShop.service.Interface
         Task<BaseResponse<IEnumerable<User>>> GetAllAsync(CancellationToken cancellationToken);
         Task<BaseResponse<bool>> DeleteAsync(Guid id, CancellationToken cancellationToken);
         Task<BaseResponse<bool>> UpdateAsync(Guid id, CreateUserDto request, CancellationToken cancellationToken);
+        Task<BaseResponse<bool>> PromoteToAdminAsync(Guid userId);
     }
 }

@@ -1,17 +1,20 @@
-﻿using EShop.Data;
+﻿using EShop.Context;
+using EShop.Data;
 using EShop.Dto.Auth;
 using EShop.service;
 using EShop.service.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 namespace EShop.Dto.Auth
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AuthController(IAuthService authService) : ControllerBase
+    public class AuthController(IAuthService authService, ApplicationDbContext dbContext) : ControllerBase
     {
         private readonly IAuthService _authService = authService;
+        private readonly ApplicationDbContext _dbContext = dbContext;
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDto? request, CancellationToken cancellationToken)
@@ -139,11 +142,39 @@ namespace EShop.Dto.Auth
             }
         }
 
-        [Authorize(Policy = "AdminOnly")]
-        [HttpGet("admin-data")]
-        public IActionResult GetAdminData()
+        [HttpGet("GetAdminData")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAdminData(CancellationToken cancellationToken)
         {
-            return Ok("This is admin-only data");
+            try
+            {
+                var adminData = await (from u in _dbContext.Users
+                                       join ur in _dbContext.UserRoles on u.Id equals ur.UserId
+                                       join r in _dbContext.Roles on ur.RoleId equals r.Id
+                                       where r.Name == "Admin"
+                                       select new
+                                       {
+                                           u.Id,
+                                           u.Name,
+                                           u.Email
+                                       }).ToListAsync(cancellationToken);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Data = adminData
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error fetching admin data");
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = "An error occurred while retrieving admin data."
+                });
+            }
         }
+
     }
 }

@@ -1,4 +1,5 @@
-﻿using EShop.Data;
+﻿using EShop.Context;
+using EShop.Data;
 using EShop.Dto;
 using EShop.Dto.UserModel;
 using EShop.Repositories.Interface;
@@ -7,7 +8,7 @@ using Serilog;
 
 namespace EShop.service
 {
-    public class UserService(IUserRepository userRepository) : IUserService
+    public class UserService(ApplicationDbContext _dbContext, IUserRepository userRepository) : IUserService
     {
         public async Task<BaseResponse<User>> CreateAsync(CreateUserDto request, CancellationToken cancellationToken)
         {
@@ -142,6 +143,28 @@ namespace EShop.service
             {
                 Log.Error(ex, "Error occurred while fetching user with ID {UserId}", id);
                 return BaseResponse<User?>.FailureResponse($"Error: {ex.Message}");
+            }
+        }
+
+        public async Task<BaseResponse<bool>> PromoteToAdminAsync(Guid userId)
+        {
+            var user = await _dbContext.Users.FindAsync(userId);
+            if (user == null) throw new Exception("User not found");
+
+            var adminRole = await _dbContext.Roles.FirstOrDefaultAsync(r => r.Name == "Admin");
+            if (adminRole == null) throw new Exception("Admin role missing");
+
+            var alreadyAdmin = await _dbContext.UserRoles
+                .AnyAsync(ur => ur.UserId == userId && ur.RoleId == adminRole.id);
+
+            if (!alreadyAdmin)
+            {
+                _dbContext.UserRoles.Add(new UserRole
+                {
+                    UserId = userId,
+                    RoleId = adminRole.id
+                });
+                await _dbContext.SaveChangesAsync();
             }
         }
 

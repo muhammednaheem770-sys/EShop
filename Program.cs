@@ -1,11 +1,12 @@
 ﻿using EShop.Configurations;
 using EShop.Context;
+using EShop.Data;
 using EShop.Repositories;
 using EShop.Repositories.Interface;
-using EShop.Service;
-using EShop.Service.Interface;
 using EShop.service;
 using EShop.service.Interface;
+using EShop.Service;
+using EShop.Service.Interface;
 using EShop.validators;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -18,7 +19,6 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ------------------- 🔹 Logging -------------------
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Day)
@@ -28,7 +28,6 @@ builder.Host.UseSerilog();
 
 Log.Information("Starting EShop API configuration...");
 
-// ------------------- 🔹 Database -------------------
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -40,7 +39,6 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("UserOnly", policy => policy.RequireRole("User"));
 });
 
-// ------------------- 🔹 JWT Configuration -------------------
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
 builder.Services.AddSingleton(jwtSettings);
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -67,21 +65,18 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// ------------------- 🔹 Authorization -------------------
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
     options.AddPolicy("UserOnly", policy => policy.RequireRole("User"));
 });
 
-// ------------------- 🔹 Repositories -------------------
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();
 
-// ------------------- 🔹 Services -------------------
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
@@ -90,11 +85,9 @@ builder.Services.AddScoped<IUserRoleService, UserRoleService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-// ------------------- 🔹 Validation -------------------
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<AddProductRequestValidator>();
 
-// ------------------- 🔹 Swagger -------------------
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -105,7 +98,6 @@ builder.Services.AddSwaggerGen(c =>
         Description = "API documentation for the EShop backend"
     });
 
-    // ✅ JWT Auth Support in Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -132,13 +124,17 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// ------------------- 🔹 Controllers -------------------
 builder.Services.AddControllers();
 
-// ------------------- 🔹 Build App -------------------
 var app = builder.Build();
 
-// ------------------- 🔹 Middleware -------------------
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await DatabaseSeeder.SeedAsync(dbContext);
+}
+
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -153,7 +149,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// ------------------- 🔹 Run Application -------------------
+
 try
 {
     Log.Information("Starting EShop API...");
