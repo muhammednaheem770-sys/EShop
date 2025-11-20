@@ -13,6 +13,7 @@ namespace EShop.Data
         public Gender Gender { get; set; }
         public Guid Id { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public string UserName { get; set; } = string.Empty;
         public string PassWord { get; set; } = string.Empty;
         public string? RefreshToken { get; set; }

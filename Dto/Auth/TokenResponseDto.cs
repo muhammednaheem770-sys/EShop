@@ -13,17 +13,24 @@
             RefreshToken = refreshToken;
         }
 
+        public TokenResponseDto(string accessToken, string refreshToken, DateTime? expiryTime)
+        {
+            AccessToken = accessToken;
+            RefreshToken = refreshToken;
+            RefreshTokenExpiryTime = expiryTime;
+        }
+
         public TokenResponseDto(string token, string refreshToken, DateTime expiryTime)
         {
             Token = token;
             RefreshToken = refreshToken;
         }
 
-        public TokenResponseDto(string token, string refreshToken, DateTime? expiry)
-        : this(token, refreshToken)
-        {
-            RefreshTokenExpiryTime = expiry;
-        }
+        //public TokenResponseDto(string token, string refreshToken, DateTime? expiry)
+        //: this(token, refreshToken)
+        //{
+        //    RefreshTokenExpiryTime = expiry;
+        //}
 
         public TokenResponseDto() { }
     }

@@ -1,7 +1,10 @@
 ﻿using EShop.Dto.CategoryModel;
 using EShop.Dto.UserModel;
+using EShop.service;
 using EShop.service.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 
 namespace EShop.Controllers
 {
@@ -70,6 +73,22 @@ namespace EShop.Controllers
                 return NotFound(response.Message);
 
             return Ok(response);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("promote/{userId}")]
+        public async Task<IActionResult> PromoteToAdmin(Guid userId)
+        {
+            var result = await userService.PromoteToAdminAsync(userId);
+
+            if (!result.Success)
+            {
+                Log.Warning("Failed to promote user {UserId}: {Message}", userId, result.Message);
+                return BadRequest(result.Message);
+            }
+
+            Log.Information("User {UserId} promoted to Admin successfully", userId);
+            return Ok(result.Message);
         }
     }
 }

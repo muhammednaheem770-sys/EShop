@@ -4,6 +4,7 @@ using EShop.Dto;
 using EShop.Dto.UserModel;
 using EShop.Repositories.Interface;
 using EShop.service.Interface;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 namespace EShop.service
@@ -148,24 +149,28 @@ namespace EShop.service
 
         public async Task<BaseResponse<bool>> PromoteToAdminAsync(Guid userId)
         {
+
             var user = await _dbContext.Users.FindAsync(userId);
             if (user == null) throw new Exception("User not found");
-
+              
             var adminRole = await _dbContext.Roles.FirstOrDefaultAsync(r => r.Name == "Admin");
-            if (adminRole == null) throw new Exception("Admin role missing");
+            if (adminRole == null) throw new Exception("Admin role not found");
 
-            var alreadyAdmin = await _dbContext.UserRoles
-                .AnyAsync(ur => ur.UserId == userId && ur.RoleId == adminRole.id);
+            var userHasRole = await _dbContext.UserRoles
+                 .AnyAsync(ur => ur.UserId == userId && ur.RoleId == adminRole.Id);
 
-            if (!alreadyAdmin)
+            if (!userHasRole)
             {
                 _dbContext.UserRoles.Add(new UserRole
                 {
                     UserId = userId,
-                    RoleId = adminRole.id
+                    RoleId = adminRole.Id
                 });
+
                 await _dbContext.SaveChangesAsync();
             }
+
+            return BaseResponse<bool>.SuccessResponse(true, "User promoted to Admin successfully");
         }
 
         public async Task<BaseResponse<bool>> UpdateAsync(Guid id, CreateUserDto request, CancellationToken cancellationToken)

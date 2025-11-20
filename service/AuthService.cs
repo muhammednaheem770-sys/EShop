@@ -41,7 +41,6 @@ namespace EShop.service
                 return BaseResponse<TokenResponseDto>.FailureResponse("Invalid email or password");
             }
 
-            // ✅ Fetch roles dynamically from UserRoles table
             var roles = await _dbContext.UserRoles
                 .Where(ur => ur.UserId == user.Id)
                 .Select(ur => ur.Role.Name)
@@ -55,18 +54,17 @@ namespace EShop.service
 
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            var tokenResponse = new TokenResponseDto
-            {
-                Token = jwtToken,
-                RefreshToken = refreshToken,
-                RefreshTokenExpiryTime = user.RefreshTokenExpiryTime
-            };
+            var tokenResponse = new TokenResponseDto(
+                token:jwtToken,
+                refreshToken: refreshToken,
+                expiryTime: user.RefreshTokenExpiryTime.Value
+            );
 
             Log.Information("Login successful for {Email}", request.Email);
             return BaseResponse<TokenResponseDto>.SuccessResponse(tokenResponse, "Login successful");
         }
 
-
+        
 
 
         public ClaimsPrincipal GetPrincipalFromExpiredToken(string token)

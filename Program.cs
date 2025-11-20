@@ -25,7 +25,6 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 builder.Host.UseSerilog();
-
 Log.Information("Starting EShop API configuration...");
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -33,15 +32,8 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("UserOnly", policy => policy.RequireRole("User"));
-});
-
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
 builder.Services.AddSingleton(jwtSettings);
-builder.Services.AddScoped<ITokenService, TokenService>();
 
 var key = Encoding.UTF8.GetBytes(jwtSettings.Secret);
 
@@ -61,7 +53,7 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings.Issuer,
         ValidAudience = jwtSettings.Audience,
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ClockSkew = TimeSpan.Zero // Prevents delay on token expiration
+        ClockSkew = TimeSpan.Zero
     };
 });
 
@@ -82,6 +74,7 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRoleService, UserRoleService>();
+
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
@@ -105,7 +98,7 @@ builder.Services.AddSwaggerGen(c =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Enter 'Bearer' [space] and then your valid token."
+        Description = "Enter 'Bearer' + space + your valid token"
     });
 
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -119,7 +112,7 @@ builder.Services.AddSwaggerGen(c =>
                     Id = "Bearer"
                 }
             },
-            new string[] { }
+            new string[] {}
         }
     });
 });
@@ -134,7 +127,6 @@ using (var scope = app.Services.CreateScope())
     await DatabaseSeeder.SeedAsync(dbContext);
 }
 
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -148,7 +140,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
 
 try
 {
